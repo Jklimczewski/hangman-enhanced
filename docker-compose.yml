@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:21.0.2
+    ports:
+    - 8080:8080
+    - 8843:8443
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL_HOST=mypostgres
+      - KC_DB_URL_DATABASE=keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=value
+      - KC_HTTPS_CERTIFICATE_FILE=/etc/x509/https/tls.crt
+      - KC_HTTPS_CERTIFICATE_KEY_FILE=/etc/x509/https/tls.key
+    volumes:
+    - C:\Users\kukli\cert:/etc/x509/https/tls.crt
+    - C:\Users\kukli\key:/etc/x509/https/tls.key
+    depends_on:
+      - mypostgres
+    networks:
+      - keycloak_network
+  
+  mybackend:
+    build:
+      dockerfile: Dockerfile
+      context: ./backend
+    depends_on:
+      - keycloak
+    ports:
+      - 5000:5000
+    volumes:
+    - C:\infa\hangmanProject\front\src\game\wordList.json:/app/wordList.json
+
+  mypostgres:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_PASSWORD=value
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+    volumes:
+      - mydb:/var/lib/postgresql/data
+    networks:
+      - keycloak_network
+
+  myfrontend:
+    restart: always
+    build:
+      dockerfile: Dockerfile
+      context: ./front
+    depends_on:
+      - keycloak
+    ports:
+      - 443:443
+  
+volumes:
+  mydb: {}
+networks:
+  keycloak_network: 
+    driver: bridge
